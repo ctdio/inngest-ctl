@@ -1,0 +1,50 @@
+{
+  "name": "@ctdio/inngest-ctl",
+  "version": "0.1.0",
+  "description": "CLI for interacting with Inngest's REST API - list events, send events, check run status, and cancel runs",
+  "author": "Charlie Duong",
+  "license": "MIT",
+  "type": "module",
+  "main": "cli.ts",
+  "module": "cli.ts",
+  "bin": {
+    "inngest-ctl": "./cli.ts"
+  },
+  "files": [
+    "cli.ts",
+    "lib/*.ts",
+    "!lib/*.test.ts",
+    "!lib/test-utils.ts"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "inngest",
+    "cli",
+    "events",
+    "functions",
+    "runs",
+    "workflow",
+    "serverless"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ctdio/inngest-ctl"
+  },
+  "scripts": {
+    "start": "bun run cli.ts",
+    "build": "bun build --compile ./cli.ts --outfile dist/inngest-ctl",
+    "test": "bun test",
+    "test:watch": "bun test --watch"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
