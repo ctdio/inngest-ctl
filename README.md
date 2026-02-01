@@ -12,6 +12,16 @@ bunx @ctdio/inngest-ctl <command>
 alias inngest-ctl="bunx @ctdio/inngest-ctl"
 ```
 
+### Agent Skill
+
+Install as an agent skill for AI-assisted Inngest operations:
+
+```bash
+npx skills install ctdio/inngest-ctl
+```
+
+Once installed, your agent can query events, check run status, and manage Inngest functions directly.
+
 ### Environment Variables
 
 ```bash
