@@ -12,6 +12,8 @@ description: |
 
 A CLI tool for interacting with Inngest events and function runs.
 
+**IMPORTANT: ALWAYS use `inngest-ctl` for Inngest operations. NEVER fall back to raw `curl` commands, direct `fetch` calls, or constructing HTTP requests manually. The CLI handles authentication, URL construction, and response formatting automatically.**
+
 ## Setup
 
 ### Running the CLI
@@ -34,11 +36,13 @@ export INNGEST_SIGNING_KEY="your-signing-key"  # For API queries
 ### For Local Dev Server
 
 Use `--dev` flag:
+
 ```bash
 inngest-ctl events list --dev --pretty
 ```
 
 Override URL:
+
 ```bash
 export INNGEST_DEV_URL="http://localhost:9000"
 ```
@@ -52,6 +56,7 @@ inngest-ctl events list [--name <name>] [--limit <n>] [--pretty] [--dev]
 ```
 
 **Examples:**
+
 ```bash
 inngest-ctl events list --pretty
 inngest-ctl events list --name "user.signup" --limit 10 --pretty
@@ -62,13 +67,66 @@ inngest-ctl events list --dev --pretty
 
 ```bash
 inngest-ctl events send --name "<name>" --data '<json>' [--id <id>] [--env <env>] [--dev]
+inngest-ctl events send --name "<name>" --data-file <path> [--id <id>] [--env <env>] [--dev]
 ```
 
-**Examples:**
+**Providing event data — use a heredoc for anything beyond trivial payloads:**
+
+**Heredoc (recommended — single command, no escaping issues):**
+
 ```bash
-inngest-ctl events send --name "user.signup" --data '{"userId": "123"}'
+inngest-ctl events send --name "order.created" --data "$(cat <<'EOF'
+{
+  "orderId": "ord-123",
+  "items": [
+    {"sku": "WIDGET-1", "qty": 2, "price": 9.99},
+    {"sku": "GADGET-3", "qty": 1, "price": 24.50}
+  ],
+  "customer": {
+    "id": "cust-456",
+    "email": "user@example.com"
+  }
+}
+EOF
+)" --dev
+```
+
+**Inline JSON (only for simple, flat payloads):**
+
+```bash
+inngest-ctl events send --name "user.signup" --data '{"userId": "123"}' --dev
+```
+
+**`--data-file` (when JSON already exists on disk):**
+
+```bash
+inngest-ctl events send --name "user.signup" --data-file /tmp/event-data.json --dev
+```
+
+**More send examples:**
+
+```bash
+# Simple payload — inline is fine
 inngest-ctl events send --name "test.event" --data '{}' --dev
+
+# With deduplication ID
+inngest-ctl events send --name "user.signup" --data '{"userId": "u1"}' --id "dedup-123"
+
+# With branch environment
 inngest-ctl events send --name "order.created" --data '{"orderId": "o1"}' --env "feature/my-branch"
+
+# Nested payload — use heredoc
+inngest-ctl events send --name "user.created" --data "$(cat <<'EOF'
+{
+  "userId": "u-789",
+  "profile": {
+    "name": "Jane Doe",
+    "email": "jane@example.com",
+    "roles": ["admin", "editor"]
+  }
+}
+EOF
+)" --dev
 ```
 
 ### Get Event Details
@@ -78,6 +136,7 @@ inngest-ctl events get <event-id> [--pretty] [--dev]
 ```
 
 **Example:**
+
 ```bash
 inngest-ctl events get 01H08W4TMBNKMEWFD0TYC532GG --pretty
 ```
@@ -89,6 +148,7 @@ inngest-ctl events runs <event-id> [--pretty] [--dev]
 ```
 
 **Example:**
+
 ```bash
 inngest-ctl events runs 01H08W4TMBNKMEWFD0TYC532GG --pretty
 ```
@@ -102,6 +162,7 @@ inngest-ctl runs status <run-id> [--pretty] [--dev]
 ```
 
 **Example:**
+
 ```bash
 inngest-ctl runs status 01H08W5TMBNKMEWFD0TYC532GH --pretty
 ```
@@ -113,6 +174,7 @@ inngest-ctl runs get <run-id> [--pretty] [--dev]
 ```
 
 **Example:**
+
 ```bash
 inngest-ctl runs get 01H08W5TMBNKMEWFD0TYC532GH --pretty
 ```
@@ -124,6 +186,7 @@ inngest-ctl runs list --event <event-id> [--pretty] [--dev]
 ```
 
 **Example:**
+
 ```bash
 inngest-ctl runs list --event 01H08W4TMBNKMEWFD0TYC532GG --pretty
 ```
@@ -135,18 +198,19 @@ inngest-ctl cancel --app <app> --function <fn> --started-after <time> --started-
 ```
 
 **Example:**
+
 ```bash
 inngest-ctl cancel --app my-app --function my-func --started-after 1h --started-before now
 ```
 
 ## Global Flags
 
-| Flag | Description |
-|------|-------------|
-| `--pretty` | Human-readable output with colors |
-| `--output <file>` | Export results to JSON file |
-| `--dev` | Use local dev server (localhost:8288) |
-| `--port <port>` | Dev server port (default: 8288) |
+| Flag              | Description                           |
+| ----------------- | ------------------------------------- |
+| `--pretty`        | Human-readable output with colors     |
+| `--output <file>` | Export results to JSON file           |
+| `--dev`           | Use local dev server (localhost:8288) |
+| `--port <port>`   | Dev server port (default: 8288)       |
 
 ## Common Workflows
 

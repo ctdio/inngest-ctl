@@ -19,7 +19,9 @@ describe("CLI integration", () => {
         {
           method: "GET",
           path: "/v1/events/evt-test",
-          response: mockEventResponse("evt-test", "test.event", { key: "value" }),
+          response: mockEventResponse("evt-test", "test.event", {
+            key: "value",
+          }),
         },
         {
           method: "GET",
@@ -32,7 +34,10 @@ describe("CLI integration", () => {
         {
           method: "GET",
           path: "/v1/events/evt-test/runs",
-          response: { data: [], metadata: { fetched_at: new Date().toISOString() } },
+          response: {
+            data: [],
+            metadata: { fetched_at: new Date().toISOString() },
+          },
         },
         // Runs
         {
@@ -61,7 +66,9 @@ describe("CLI integration", () => {
     server.stop();
   });
 
-  async function runCli(args: string[]): Promise<{ stdout: string; stderr: string; exitCode: number }> {
+  async function runCli(
+    args: string[],
+  ): Promise<{ stdout: string; stderr: string; exitCode: number }> {
     const proc = Bun.spawn(["bun", "run", "cli.ts", ...args], {
       env: {
         ...process.env,
@@ -130,7 +137,12 @@ describe("CLI integration", () => {
     });
 
     test("events get returns event details", async () => {
-      const { stdout, exitCode } = await runCli(["events", "get", "evt-test", "--dev"]);
+      const { stdout, exitCode } = await runCli([
+        "events",
+        "get",
+        "evt-test",
+        "--dev",
+      ]);
 
       expect(exitCode).toBe(0);
       const result = JSON.parse(stdout);
@@ -139,21 +151,74 @@ describe("CLI integration", () => {
     });
 
     test("events send requires --name", async () => {
-      const { stderr, exitCode } = await runCli(["events", "send", "--data", "{}", "--dev"]);
+      const { stderr, exitCode } = await runCli([
+        "events",
+        "send",
+        "--data",
+        "{}",
+        "--dev",
+      ]);
 
       expect(exitCode).toBe(1);
       expect(stderr).toContain("--name is required");
     });
 
-    test("events send requires --data", async () => {
-      const { stderr, exitCode } = await runCli(["events", "send", "--name", "test", "--dev"]);
+    test("events send requires --data or --data-file", async () => {
+      const { stderr, exitCode } = await runCli([
+        "events",
+        "send",
+        "--name",
+        "test",
+        "--dev",
+      ]);
 
       expect(exitCode).toBe(1);
-      expect(stderr).toContain("--data is required");
+      expect(stderr).toContain("--data or --data-file is required");
+    });
+
+    test("events send with --data-file reads JSON from file", async () => {
+      const tmpFile = "/tmp/inngest-ctl-test-data.json";
+      await Bun.write(tmpFile, JSON.stringify({ userId: "from-file" }));
+
+      const { stdout, exitCode } = await runCli([
+        "events",
+        "send",
+        "--name",
+        "test.event",
+        "--data-file",
+        tmpFile,
+        "--dev",
+      ]);
+
+      expect(exitCode).toBe(0);
+      const result = JSON.parse(stdout);
+      expect(result.ids).toContain("evt-new");
+    });
+
+    test("events send with --data-file rejects missing file", async () => {
+      const { stderr, exitCode } = await runCli([
+        "events",
+        "send",
+        "--name",
+        "test",
+        "--data-file",
+        "/tmp/nonexistent-file.json",
+        "--dev",
+      ]);
+
+      expect(exitCode).toBe(1);
     });
 
     test("events send validates JSON data", async () => {
-      const { stderr, exitCode } = await runCli(["events", "send", "--name", "test", "--data", "invalid", "--dev"]);
+      const { stderr, exitCode } = await runCli([
+        "events",
+        "send",
+        "--name",
+        "test",
+        "--data",
+        "invalid",
+        "--dev",
+      ]);
 
       expect(exitCode).toBe(1);
       expect(stderr).toContain("--data must be valid JSON");
@@ -162,7 +227,12 @@ describe("CLI integration", () => {
 
   describe("runs commands", () => {
     test("runs status returns run details", async () => {
-      const { stdout, exitCode } = await runCli(["runs", "status", "run-test", "--dev"]);
+      const { stdout, exitCode } = await runCli([
+        "runs",
+        "status",
+        "run-test",
+        "--dev",
+      ]);
 
       expect(exitCode).toBe(0);
       const result = JSON.parse(stdout);
@@ -211,15 +281,18 @@ describe("CLI integration", () => {
     });
 
     test("dev mode works without signing key", async () => {
-      const proc = Bun.spawn(["bun", "run", "cli.ts", "events", "list", "--dev"], {
-        env: {
-          ...process.env,
-          INNGEST_SIGNING_KEY: "",
-          INNGEST_DEV_URL: `http://localhost:${port}`,
+      const proc = Bun.spawn(
+        ["bun", "run", "cli.ts", "events", "list", "--dev"],
+        {
+          env: {
+            ...process.env,
+            INNGEST_SIGNING_KEY: "",
+            INNGEST_DEV_URL: `http://localhost:${port}`,
+          },
+          stdout: "pipe",
+          stderr: "pipe",
         },
-        stdout: "pipe",
-        stderr: "pipe",
-      });
+      );
 
       const stdout = await new Response(proc.stdout).text();
       const exitCode = await proc.exited;

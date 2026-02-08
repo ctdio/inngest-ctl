@@ -80,6 +80,7 @@ async function handleEvents(args: string[], flags: GlobalFlags): Promise<void> {
       const parsed = parseNamedArgs(subArgs);
       const name = parsed["name"];
       const dataStr = parsed["data"];
+      const dataFile = parsed["data-file"];
       const id = parsed["id"];
       const env = parsed["env"];
 
@@ -87,20 +88,29 @@ async function handleEvents(args: string[], flags: GlobalFlags): Promise<void> {
         printError("--name is required", flags.pretty);
         process.exit(1);
       }
-      if (!dataStr) {
-        printError("--data is required", flags.pretty);
+      if (!dataStr && !dataFile) {
+        printError("--data or --data-file is required", flags.pretty);
         process.exit(1);
       }
 
       let data: Record<string, unknown>;
       try {
-        data = JSON.parse(dataStr);
-      } catch {
-        printError("--data must be valid JSON", flags.pretty);
+        const rawJson = dataFile ? await readDataFile(dataFile) : dataStr!;
+        data = JSON.parse(rawJson);
+      } catch (err) {
+        const source = dataFile ? `--data-file (${dataFile})` : "--data";
+        printError(`${source} must be valid JSON`, flags.pretty);
         process.exit(1);
       }
 
-      const result = await sendEvent({ name, data, id, env, dev: flags.dev, port: flags.port });
+      const result = await sendEvent({
+        name,
+        data,
+        id,
+        env,
+        dev: flags.dev,
+        port: flags.port,
+      });
       printOutput(result, flags);
       break;
     }
@@ -111,7 +121,10 @@ async function handleEvents(args: string[], flags: GlobalFlags): Promise<void> {
         printError("Event ID is required", flags.pretty);
         process.exit(1);
       }
-      const result = await getEvent(eventId, { dev: flags.dev, port: flags.port });
+      const result = await getEvent(eventId, {
+        dev: flags.dev,
+        port: flags.port,
+      });
       printOutput(result, flags);
       break;
     }
@@ -122,7 +135,10 @@ async function handleEvents(args: string[], flags: GlobalFlags): Promise<void> {
         printError("Event ID is required", flags.pretty);
         process.exit(1);
       }
-      const result = await getEventRuns(eventId, { dev: flags.dev, port: flags.port });
+      const result = await getEventRuns(eventId, {
+        dev: flags.dev,
+        port: flags.port,
+      });
       printOutput(result, flags);
       break;
     }
@@ -133,7 +149,12 @@ async function handleEvents(args: string[], flags: GlobalFlags): Promise<void> {
       const limitStr = parsed["limit"];
       const limit = limitStr ? parseInt(limitStr, 10) : undefined;
 
-      const result = await listEvents({ name, limit, dev: flags.dev, port: flags.port });
+      const result = await listEvents({
+        name,
+        limit,
+        dev: flags.dev,
+        port: flags.port,
+      });
       printOutput(result, flags);
       break;
     }
@@ -167,7 +188,10 @@ async function handleRuns(args: string[], flags: GlobalFlags): Promise<void> {
         printError("Run ID is required", flags.pretty);
         process.exit(1);
       }
-      const result = await getRunJobs(runId, { dev: flags.dev, port: flags.port });
+      const result = await getRunJobs(runId, {
+        dev: flags.dev,
+        port: flags.port,
+      });
       printOutput(result, flags);
       break;
     }
@@ -179,7 +203,10 @@ async function handleRuns(args: string[], flags: GlobalFlags): Promise<void> {
         printError("--event is required", flags.pretty);
         process.exit(1);
       }
-      const result = await getEventRuns(eventId, { dev: flags.dev, port: flags.port });
+      const result = await getEventRuns(eventId, {
+        dev: flags.dev,
+        port: flags.port,
+      });
       printOutput(result, flags);
       break;
     }
@@ -364,15 +391,17 @@ List Options:
   --limit <n>       Max events to return (optional)
 
 Send Options:
-  --name <name>     Event name (required)
-  --data <json>     Event data as JSON (required)
-  --id <id>         Deduplication ID (optional)
-  --env <env>       Branch environment name (optional)
+  --name <name>         Event name (required)
+  --data <json>         Event data as inline JSON (required unless --data-file)
+  --data-file <path>    Read event data from a JSON file (required unless --data)
+  --id <id>             Deduplication ID (optional)
+  --env <env>           Branch environment name (optional)
 
 Examples:
   inngest-ctl events list --pretty
   inngest-ctl events list --name "user.signup" --limit 10 --pretty
   inngest-ctl events send --name "user.signup" --data '{"userId": "123"}'
+  inngest-ctl events send --name "test.event" --data-file /tmp/event.json --dev
   inngest-ctl events send --name "test.event" --data '{}' --env "feature/my-branch"
   inngest-ctl events get 01H08W4TMBNKMEWFD0TYC532GG --pretty
   inngest-ctl events runs 01H08W4TMBNKMEWFD0TYC532GG --pretty
@@ -399,6 +428,15 @@ Examples:
   inngest-ctl runs get 01H08W5TMBNKMEWFD0TYC532GH --pretty
   inngest-ctl runs list --event 01H08W4TMBNKMEWFD0TYC532GG
 `);
+}
+
+// File helpers
+async function readDataFile(filePath: string): Promise<string> {
+  const file = Bun.file(filePath);
+  if (!(await file.exists())) {
+    throw new Error(`File not found: ${filePath}`);
+  }
+  return file.text();
 }
 
 main();
