@@ -45,7 +45,7 @@ async function main(): Promise<void> {
       case "version":
       case "--version":
       case "-v":
-        console.log("0.1.0");
+        console.log("0.2.0");
         break;
       default:
         printError(`Unknown command: ${command}`, flags.pretty);

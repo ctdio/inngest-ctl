@@ -1,6 +1,6 @@
 {
   "name": "@ctdio/inngest-ctl",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "CLI for interacting with Inngest's REST API - list events, send events, check run status, and cancel runs",
   "author": "Charlie Duong",
   "license": "MIT",

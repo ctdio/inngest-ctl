@@ -122,7 +122,7 @@ describe("CLI integration", () => {
       const { stdout, exitCode } = await runCli(["--version"]);
 
       expect(exitCode).toBe(0);
-      expect(stdout.trim()).toBe("0.1.0");
+      expect(stdout.trim()).toBe("0.2.0");
     });
   });
 
